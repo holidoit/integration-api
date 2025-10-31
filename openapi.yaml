@@ -15,7 +15,7 @@ info:
     ```
 
 servers:
-  - url: https://staging.holidoit.com
+  - url: https://staging.holydoit.com
     description: Test server
 
 
