@@ -66,7 +66,7 @@ paths:
         Retrieve availability slots for a given option between two local datetimes.
 
         **Authentication required:** Basic Auth
-      operationId: getFreedomeAvailabilities
+      operationId: getAvailabilities
       security:
         - BasicAuth: []
       parameters:
@@ -101,7 +101,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/FreedomeAvailability'
+                  $ref: '#/components/schemas/Availability'
         '400':
           description: Invalid parameters or validation failed.
         '401':
@@ -183,7 +183,7 @@ paths:
         workflows such as partner emails.
 
         **Authentication required:** Basic Auth
-      operationId: postFreedomeConfirmBooking
+      operationId: postConfirmBooking
       security:
         - BasicAuth: []
       parameters:
@@ -242,7 +242,7 @@ paths:
 
         This endpoint marks the booking as **CANCELLED**.
         **Authentication required:** Basic Auth
-      operationId: postFreedomeCancelBooking
+      operationId: postCancelBooking
       security:
         - BasicAuth: []
       parameters:
@@ -295,7 +295,7 @@ paths:
         Fields that are not provided in the request will remain unchanged.
         **Authentication required:** Basic Auth  
 
-      operationId: patchFreedomeBookingAmendment
+      operationId: patchBookingAmendment
       security:
         - BasicAuth: []
       parameters:
@@ -411,7 +411,7 @@ components:
           example: Adult
           description: The participant type name.
 
-    FreedomeAvailability:
+    Availability:
       type: object
       required:
         - id
@@ -520,7 +520,7 @@ components:
         availability:
           type: array
           items:
-            $ref: '#/components/schemas/FreedomeAvailability'
+            $ref: '#/components/schemas/Availability'
   
     ConfirmBookingRequest:
       type: object
