@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Freedome API
+  title: Holidoit Business API
   version: "1.0.0"
   description: >
     API endpoints for the Holidoit integration.
