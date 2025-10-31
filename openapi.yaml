@@ -1,0 +1,669 @@
+openapi: 3.0.3
+info:
+  title: Freedome API
+  version: "1.0.0"
+  description: >
+    API endpoints for the Holidoit integration.
+
+    All endpoints are protected by HTTP Basic Authentication.
+    Each request must include a valid username and password
+    in the `Authorization` header.
+
+    Example:
+    ```
+    Authorization: Basic base64(username:password)
+    ```
+
+servers:
+  - url: https://staging.holidoit.com
+    description: Test server
+
+
+paths:
+  /products/{optionId}:
+    get:
+      tags:
+        - Integration
+      summary: Get option information
+      description: >
+        Retrieve detailed information for a Holidoit option,
+        including cutoff times, cancellation policy, participant options,
+        duration, and quantity limits.
+
+        **Authentication required:** Basic Auth
+      operationId: getOptionInfo
+      security:
+        - BasicAuth: []  # Require authentication for this endpoint
+      parameters:
+        - name: optionId
+          in: path
+          required: true
+          description: The unique ID of the option.
+          schema:
+            type: integer
+            example: 123
+      responses:
+        '200':
+          description: Detailed information about the option.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionInfo'
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+        '404':
+          description: Variant not found.
+
+
+  /availabilities:
+    get:
+      tags:
+        - Integration
+      summary: Get option availabilities
+      description: >
+        Retrieve availability slots for a given option between two local datetimes.
+
+        **Authentication required:** Basic Auth
+      operationId: getFreedomeAvailabilities
+      security:
+        - BasicAuth: []
+      parameters:
+        - name: optionId
+          in: query
+          required: true
+          description: The ID of the variant (option) to get availabilities for.
+          schema:
+            type: string
+            example: "123"
+        - name: localDateStart
+          in: query
+          required: true
+          description: >
+            The local start datetime in ISO 8601 format (e.g. `2024-11-17T09:00:00+00:00`).
+          schema:
+            type: string
+            format: date-time
+        - name: localDateEnd
+          in: query
+          required: true
+          description: >
+            The local end datetime in ISO 8601 format (e.g. `2024-11-20T18:00:00+00:00`).
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: List of availability slots for the given variant.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FreedomeAvailability'
+        '400':
+          description: Invalid parameters or validation failed.
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+        '404':
+          description: Variant not found.
+
+  /bookings:
+    post:
+      tags:
+        - Integration
+      summary: Reserve a booking
+      description: >
+        Create a new booking for a specific option.
+
+        This endpoint validates availability, participant limits, and notice period,
+        then reserves the slot by creating a booking in the Holidoit system.
+
+        **Authentication required:** Basic Auth
+      operationId: postReserveBooking
+      security:
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest'
+            example:
+              optionId: 123
+              bookingReference: "FRD-ABC123"
+              availability: "2025-06-15T10:00:00+02:00"
+              bookingItems:
+                - unitId: 1
+                  quantity: 2
+                - unitId: 2
+                  quantity: 1
+      responses:
+        '200':
+          description: Booking reserved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResponse'
+              example:
+                supplierReference: "HLD-987654"
+                resellerReference: "FRD-ABC123"
+                utcCreatedAt: "2025-06-15T08:00:00Z"
+                utcExpiresAt: "2025-06-15T08:15:00Z"
+                status: "ON_HOLD"
+                availability:
+                  - id: "2025-06-15T10:00:00+02:00"
+                    localDateTimeStart: "2025-06-15T10:00:00+02:00"
+                    localDateTimeEnd: "2025-06-15T12:00:00+02:00"
+                    utcCutoffAt: "2025-06-15T08:00:00Z"
+                    available: true
+                    status: "AVAILABLE"
+                    vacancies: 5
+        '400':
+          description: Invalid input data or validation error.
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+        '404':
+          description: Variant not found.
+  /bookings/{external_reference}/confirm:
+    post:
+      tags:
+        - Integration
+      summary: Confirm a booking
+      description: >
+        Confirms a previously reserved booking identified by its `external_reference`.
+
+        This endpoint finalizes a booking by setting its status to **CONFIRMED**,
+        validating the customer's contact information, and triggering confirmation
+        workflows such as partner emails.
+
+        **Authentication required:** Basic Auth
+      operationId: postFreedomeConfirmBooking
+      security:
+        - BasicAuth: []
+      parameters:
+        - name: external_reference
+          in: path
+          required: true
+          description: >
+            The external booking reference provided during reservation
+            (e.g., the `bookingReference` used in the `/bookings` endpoint).
+          schema:
+            type: string
+            example: "FRD-ABC123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmBookingRequest'
+            example:
+              contact:
+                firstName: "John"
+                lastName: "Doe"
+                emailAddress: "john.doe@example.com"
+                phoneNumber: "+39333111222"
+              amount: 150.00
+              notes: "Customer requested window seats"
+      responses:
+        '200':
+          description: Booking confirmed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmBookingResponse'
+              example:
+                resellerReference: "FRD-ABC123"
+                supplierReference: "HLD-987654"
+                utcCreated_at: "2025-06-15T08:00:00Z"
+                utcConfirmed_at: "2025-06-15T08:05:00Z"
+                status: "CONFIRMED"
+        '400':
+          description: Invalid input data or validation error.
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+        '404':
+          description: Booking not found.
+
+  /bookings/{external_reference}/cancel:
+    post:
+      tags:
+        - Integration
+      summary: Cancel a booking
+      description: >
+        Cancels a previously confirmed booking identified by its `external_reference`.
+
+        This endpoint marks the booking as **CANCELLED**.
+        **Authentication required:** Basic Auth
+      operationId: postFreedomeCancelBooking
+      security:
+        - BasicAuth: []
+      parameters:
+        - name: external_reference
+          in: path
+          required: true
+          description: >
+            The external booking reference provided during reservation
+            (e.g., the `bookingReference` used in the `/bookings` endpoint).
+          schema:
+            type: string
+            example: "FRD-ABC123"
+      responses:
+        '200':
+          description: Booking cancelled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelBookingResponse'
+              example:
+                resellerReference: "FRD-ABC123"
+                supplierReference: "HLD-987654"
+                utcCanceledAt: "2025-06-15T09:00:00Z"
+                utcCreatedAt: "2025-06-15T08:00:00Z"
+                utcConfirmedAt: "2025-06-15T08:05:00Z"
+                status: "CANCELLED"
+        '400':
+          description: Invalid input or the booking cannot be cancelled.
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+        '404':
+          description: Booking not found.
+
+  /bookings/{external_reference}:
+    patch:
+      tags:
+        - Integration
+      summary: Amend an existing booking
+      description: >
+        Partially update a booking identified by its `external_reference`.  
+        This endpoint allows modifying:
+        - The scheduled availability (date/time)
+        - Participant quantities
+        - Contact details
+        - Notes
+        - Booking amount
+
+        Fields that are not provided in the request will remain unchanged.
+        **Authentication required:** Basic Auth  
+
+      operationId: patchFreedomeBookingAmendment
+      security:
+        - BasicAuth: []
+      parameters:
+        - name: external_reference
+          in: path
+          required: true
+          description: >
+            The external booking reference provided during reservation
+            (e.g., the `bookingReference` used in the `/bookings` endpoint).
+          schema:
+            type: string
+            example: "FRD-ABC123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingAmendmentRequest'
+            example:
+              availability: "2025-06-16T10:00:00+02:00"
+              notes: "Customer requested earlier departure time"
+              bookingItems:
+                - unitId: 1
+                  quantity: 3
+              contact:
+                firstName: "Jane"
+                lastName: "Doe"
+                phoneNumber: "+39333999888"
+              amount: 200.00
+      responses:
+        '200':
+          description: Booking amended successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingAmendmentResponse'
+              example:
+                resellerReference: "FRD-ABC123"
+                supplierReference: "HLD-987654"
+                utcUpdatedAt: "2025-06-16T08:15:00Z"
+                status: "CONFIRMED"
+        '400':
+          description: Invalid amendment data or validation error.
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+        '404':
+          description: Booking not found.
+
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+      description: >
+        HTTP Basic authentication using username and password.
+
+  schemas:
+    OptionInfo:
+      type: object
+      required:
+        - id
+        - cutoffSeconds
+        - cancellationCutoffSeconds
+        - durationSeconds
+        - bookingItems
+      properties:
+        id:
+          type: integer
+          example: 123
+          description: The ID of the variant.
+        cutoffSeconds:
+          type: integer
+          example: 86400
+          description: Booking cutoff time in seconds.
+        cancellationCutoffSeconds:
+          type: integer
+          example: 43200
+          description: Cancellation cutoff time in seconds.
+        durationSeconds:
+          type: integer
+          example: 7200
+          description: Duration of the experience in seconds.
+        bookingItems:
+          type: array
+          description: Available participant options.
+          items:
+            $ref: '#/components/schemas/TourBookingItem'
+        minQuantity:
+          type: integer
+          nullable: true
+          example: 1
+          description: Minimum number of participants.
+        maxQuantity:
+          type: integer
+          nullable: true
+          example: 10
+          description: Maximum number of participants.
+
+    TourBookingItem:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: The participant type ID.
+        name:
+          type: string
+          example: Adult
+          description: The participant type name.
+
+    FreedomeAvailability:
+      type: object
+      required:
+        - id
+        - localDateTimeStart
+        - localDateTimeEnd
+        - available
+        - status
+        - vacancies
+      properties:
+        id:
+          type: string
+          example: "2025-06-12T10:00:00+01:00"
+          description: A unique identifier for this availability (usually an ISO datetime string).
+        localDateTimeStart:
+          type: string
+          format: date-time
+          example: "2025-06-12T10:00:00+01:00"
+          description: Local start time for the availability.
+        localDateTimeEnd:
+          type: string
+          format: date-time
+          example: "2025-06-12T12:00:00+01:00"
+          description: Local end time for the availability.
+        utcCutoffAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-06-12T09:00:00Z"
+          description: UTC cutoff time for booking this slot.
+        available:
+          type: boolean
+          example: true
+          description: Whether the slot is available for booking.
+        status:
+          type: string
+          example: "AVAILABLE"
+          description: The availability status.
+        vacancies:
+          type: integer
+          example: 5
+          description: Number of available places.
+
+    ReservationRequest:
+      type: object
+      required:
+        - optionId
+        - bookingReference
+        - availability
+        - bookingItems
+      properties:
+        optionId:
+          type: integer
+          example: 123
+        bookingReference:
+          type: string
+          example: "FRD-ABC123"
+        availability:
+          type: string
+          format: date-time
+          example: "2025-06-15T10:00:00+02:00"
+        bookingItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationBookingItem'
+
+    ReservationBookingItem:
+      type: object
+      required:
+        - unitId
+        - quantity
+      properties:
+        unitId:
+          type: integer
+          example: 1
+        quantity:
+          type: integer
+          example: 2
+
+    ReservationResponse:
+      type: object
+      required:
+        - supplierReference
+        - utcCreatedAt
+        - utcExpiresAt
+        - status
+        - availability
+      properties:
+        supplierReference:
+          type: string
+          example: "HLD-987654"
+        resellerReference:
+          type: string
+          nullable: true
+          example: "FRD-ABC123"
+        utcCreatedAt:
+          type: string
+          format: date-time
+          example: "2025-06-15T08:00:00Z"
+        utcExpiresAt:
+          type: string
+          format: date-time
+          example: "2025-06-15T08:15:00Z"
+        status:
+          type: string
+          example: "ON_HOLD"
+        availability:
+          type: array
+          items:
+            $ref: '#/components/schemas/FreedomeAvailability'
+  
+    ConfirmBookingRequest:
+      type: object
+      required:
+        - contact
+        - amount
+      properties:
+        contact:
+          $ref: '#/components/schemas/Contact'
+        amount:
+          type: number
+          format: decimal
+          example: 150.00
+        notes:
+          type: string
+          nullable: true
+          example: "Customer requested window seats"
+
+    Contact:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - emailAddress
+      properties:
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Doe"
+        emailAddress:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        phoneNumber:
+          type: string
+          nullable: true
+          example: "+39333111222"
+
+    ConfirmBookingResponse:
+      type: object
+      required:
+        - resellerReference
+        - supplierReference
+        - utcCreated_at
+        - utcConfirmed_at
+        - status
+      properties:
+        resellerReference:
+          type: string
+          example: "FRD-ABC123"
+        supplierReference:
+          type: string
+          example: "HLD-987654"
+        utcCreated_at:
+          type: string
+          format: date-time
+          example: "2025-06-15T08:00:00Z"
+        utcConfirmed_at:
+          type: string
+          format: date-time
+          example: "2025-06-15T08:05:00Z"
+        status:
+          type: string
+          example: "CONFIRMED"
+
+    CancelBookingResponse:
+      type: object
+      required:
+        - resellerReference
+        - supplierReference
+        - utcCanceledAt
+        - utcCreatedAt
+        - utcConfirmedAt
+        - status
+      properties:
+        resellerReference:
+          type: string
+          example: "FRD-ABC123"
+        supplierReference:
+          type: string
+          example: "HLD-987654"
+        utcCanceledAt:
+          type: string
+          format: date-time
+          example: "2025-06-15T09:00:00Z"
+        utcCreatedAt:
+          type: string
+          format: date-time
+          example: "2025-06-15T08:00:00Z"
+        utcConfirmedAt:
+          type: string
+          format: date-time
+          example: "2025-06-15T08:05:00Z"
+        status:
+          type: string
+          example: "CANCELLED"
+
+    BookingAmendmentRequest:
+      type: object
+      properties:
+        availability:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-06-16T10:00:00+02:00"
+        notes:
+          type: string
+          nullable: true
+          example: "Customer requested earlier departure time"
+        bookingItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationBookingItem'
+        contact:
+          $ref: '#/components/schemas/Contact'
+        amount:
+          type: number
+          format: decimal
+          example: 200.00
+      description: >
+        Partial update request for an existing booking.  
+        All fields are optional — only the provided ones will be updated.
+
+    BookingAmendmentResponse:
+      type: object
+      required:
+        - resellerReference
+        - supplierReference
+        - utcUpdatedAt
+        - status
+      properties:
+        resellerReference:
+          type: string
+          example: "FRD-ABC123"
+        supplierReference:
+          type: string
+          example: "HLD-987654"
+        utcUpdatedAt:
+          type: string
+          format: date-time
+          example: "2025-06-16T08:15:00Z"
+        status:
+          type: string
+          example: "CONFIRMED"
