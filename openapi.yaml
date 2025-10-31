@@ -15,8 +15,14 @@ info:
     ```
 
 servers:
-  - url: https://staging.holydoit.com/api/v0/integrations/freedome
+  - url: https://staging.holydoit.com/api/v0/integrations/{integration}
     description: Test server
+    variables:
+      integration:
+        default: freedome
+        enum:
+          - freedome
+        description: The integration identifier.
 
 
 paths:
