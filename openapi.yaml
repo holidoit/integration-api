@@ -384,7 +384,7 @@ components:
           type: array
           description: Available participant options.
           items:
-            $ref: '#/components/schemas/TourBookingItem'
+            $ref: '#/components/schemas/OptionBookingItem'
         minQuantity:
           type: integer
           nullable: true
@@ -396,7 +396,7 @@ components:
           example: 10
           description: Maximum number of participants.
 
-    TourBookingItem:
+    OptionBookingItem:
       type: object
       required:
         - id
