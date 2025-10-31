@@ -15,7 +15,7 @@ info:
     ```
 
 servers:
-  - url: https://staging.holydoit.com
+  - url: https://staging.holydoit.com/api/v0/integrations/freedome
     description: Test server
 
 
