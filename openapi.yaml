@@ -286,7 +286,7 @@ paths:
       summary: Search confirmed bookings
       description: >
         Search and filter confirmed bookings by date range,
-        product, partner, option, or reseller references (AND).  
+        product, partner, option, or supplier references (AND).  
         
         If date range is not provided, the next 30 days are used by default.
         
@@ -295,12 +295,12 @@ paths:
       security:
         - BasicAuth: [ ]
       parameters:
-        - name: resellerReferences
+        - name: supplierReferences
           in: query
           required: false
           description: >
             List of external booking references.
-            Example: ?resellerReferences=ABC123
+            Example: ?supplierReferences=ABC123
           schema:
             type: array
             items:
@@ -387,14 +387,14 @@ paths:
         '403':
           description: Permission denied.
 
-  /bookings/{resellerReference}/reserve/cancel:
+  /bookings/{supplierReference}/reserve/cancel:
     post:
       tags:
         - Integration
       summary: Cancel a pending reservation
       description: >
         Cancels a *pending* reservation,
-        identified by its `resellerReference`.
+        identified by its `supplierReference`.
 
         If the reservation exists, it is deleted.  
         
@@ -403,10 +403,10 @@ paths:
       security:
         - BasicAuth: [ ]
       parameters:
-        - name: resellerReference
+        - name: supplierReference
           in: path
           required: true
-          description: External reference of the reservation to cancel.
+          description: The reference of the reservation to cancel.
           schema:
             type: string
             example: "FRD-RES-12345"
@@ -430,13 +430,13 @@ paths:
         '403':
           description: Permission denied.
 
-  /bookings/{resellerReference}/confirm:
+  /bookings/{supplierReference}/confirm:
     post:
       tags:
         - Integration
       summary: Confirm a booking
       description: >
-        Confirms a previously reserved booking identified by its `resellerReference`.
+        Confirms a previously reserved booking identified by its `supplierReference`.
 
         This endpoint finalizes a booking by setting its status to **CONFIRMED**,
         validating the customer's contact information, and triggering confirmation
@@ -447,7 +447,7 @@ paths:
       security:
         - BasicAuth: [ ]
       parameters:
-        - name: resellerReference
+        - name: supplierReference
           in: path
           required: true
           description: >
@@ -492,13 +492,13 @@ paths:
         '404':
           description: Booking not found.
 
-  /bookings/{resellerReference}/cancel:
+  /bookings/{supplierReference}/cancel:
     post:
       tags:
         - Integration
       summary: Cancel a booking
       description: >
-        Cancels a previously confirmed booking identified by its `resellerReference`.
+        Cancels a previously confirmed booking identified by its `supplierReference`.
 
         This endpoint marks the booking as **CANCELLED**.
         **Authentication required:** Basic Auth
@@ -506,7 +506,7 @@ paths:
       security:
         - BasicAuth: [ ]
       parameters:
-        - name: resellerReference
+        - name: supplierReference
           in: path
           required: true
           description: >
@@ -538,13 +538,13 @@ paths:
         '404':
           description: Booking not found.
 
-  /bookings/{resellerReference}:
+  /bookings/{supplierReference}:
     patch:
       tags:
         - Integration
       summary: Amend an existing booking
       description: >
-        Partially update a booking identified by its `resellerReference`.  
+        Partially update a booking identified by its `supplierReference`.  
         This endpoint allows modifying:
         - The scheduled availability (date/time)
         - Participant quantities
@@ -559,7 +559,7 @@ paths:
       security:
         - BasicAuth: [ ]
       parameters:
-        - name: resellerReference
+        - name: supplierReference
           in: path
           required: true
           description: >
