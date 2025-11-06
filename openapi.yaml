@@ -26,6 +26,95 @@ servers:
 
 
 paths:
+  /partners:
+    get:
+      tags:
+        - Integration
+      summary: List partners with active experiences
+      description: >
+        Returns a list of partners that have configured for integration.  
+        
+        **Authentication required:** Basic Auth
+      operationId: getFreedomePartners
+      security:
+        - BasicAuth: [ ]
+      responses:
+        '200':
+          description: List of partners with active integration.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartnerWithProducts'
+              example:
+                - id: "a3f20c3e-8f2e-4d33-bc12-88ff30dfbd9c"
+                  products:
+                    - id: "test-1"
+                      internalName: "Test 1"
+                    - id: "test-2"
+                      internalName: "Test 2"
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+
+  /partners/{partner_id}/products:
+    get:
+      tags:
+        - Integration
+      summary: Get partner products with their options
+      description: >
+        **Authentication required:** Basic Auth  
+        
+        Returns all products of a partner,  
+        including all options and their participant types.
+      operationId: getFreedomePartnerProducts
+      security:
+        - BasicAuth: [ ]
+      parameters:
+        - name: partner_id
+          in: path
+          required: true
+          description: >
+            Id of the partner.
+          schema:
+            type: string
+            format: string
+            example: "5d8de66c-d1ae-4a92-8279-f959f6a9afa8"
+      responses:
+        '200':
+          description: List of all active products for the given partner.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductInfoResponse'
+              example:
+                - id: "test"
+                  internalName: "test"
+                  timeZone: "Europe/Rome"
+                  options:
+                    - id: 101
+                      cutoffSeconds: 86400
+                      cancellationCutoffSeconds: 43200
+                      durationSeconds: 7200
+                      bookingItems:
+                        - id: 1
+                          name: "Adult"
+                        - id: 2
+                          name: "Child"
+                      minQuantity: 1
+                      maxQuantity: 12
+        '404':
+          description: >
+            No products found for the given partner ID.
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+
   /products/{optionId}:
     get:
       tags:
@@ -34,12 +123,12 @@ paths:
       description: >
         Retrieve detailed information for a Holidoit option,
         including cutoff times, cancellation policy, participant options,
-        duration, and quantity limits.
+        duration, and quantity limits.  
 
         **Authentication required:** Basic Auth
       operationId: getOptionInfo
       security:
-        - BasicAuth: []  # Require authentication for this endpoint
+        - BasicAuth: [ ]  # Require authentication for this endpoint
       parameters:
         - name: optionId
           in: path
@@ -74,7 +163,7 @@ paths:
         **Authentication required:** Basic Auth
       operationId: getAvailabilities
       security:
-        - BasicAuth: []
+        - BasicAuth: [ ]
       parameters:
         - name: optionId
           in: query
@@ -131,7 +220,7 @@ paths:
         **Authentication required:** Basic Auth
       operationId: postReserveBooking
       security:
-        - BasicAuth: []
+        - BasicAuth: [ ]
       requestBody:
         required: true
         content:
@@ -191,7 +280,7 @@ paths:
         **Authentication required:** Basic Auth
       operationId: postConfirmBooking
       security:
-        - BasicAuth: []
+        - BasicAuth: [ ]
       parameters:
         - name: external_reference
           in: path
@@ -250,7 +339,7 @@ paths:
         **Authentication required:** Basic Auth
       operationId: postCancelBooking
       security:
-        - BasicAuth: []
+        - BasicAuth: [ ]
       parameters:
         - name: external_reference
           in: path
@@ -303,7 +392,7 @@ paths:
 
       operationId: patchBookingAmendment
       security:
-        - BasicAuth: []
+        - BasicAuth: [ ]
       parameters:
         - name: external_reference
           in: path
@@ -361,6 +450,36 @@ components:
         HTTP Basic authentication using username and password.
 
   schemas:
+    PartnerWithProducts:
+      type: object
+      required:
+        - id
+        - products
+      properties:
+        id:
+          type: string
+          example: "a3f20c3e-8f2e-4d33-bc12-88ff30dfbd9c"
+          description: UUID of the partner.
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerProduct'
+
+    PartnerProduct:
+      type: object
+      required:
+        - id
+        - internalName
+      properties:
+        id:
+          type: string
+          example: "test"
+          description: >
+            Experience id.
+        internalName:
+          type: string
+          example: "Test"
+
     OptionInfo:
       type: object
       required:
@@ -527,7 +646,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Availability'
-  
+
     ConfirmBookingRequest:
       type: object
       required:
@@ -673,3 +792,26 @@ components:
         status:
           type: string
           example: "CONFIRMED"
+
+    ProductInfoResponse:
+      type: object
+      required:
+        - id
+        - internalName
+        - timeZone
+        - options
+      properties:
+        id:
+          type: string
+          example: "test"
+          description: Experience slug (string identifier)
+        internalName:
+          type: string
+          example: "Test"
+        timeZone:
+          type: string
+          example: "Europe/Rome"
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionInfo'
