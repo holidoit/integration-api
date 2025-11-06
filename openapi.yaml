@@ -64,11 +64,11 @@ paths:
       tags:
         - Integration
       summary: Get partner products with their options
-      description: >
-        **Authentication required:** Basic Auth  
-        
+      description: >        
         Returns all products of a partner,  
-        including all options and their participant types.
+        including all options and their participant types.  
+        
+        **Authentication required:** Basic Auth
       operationId: getFreedomePartnerProducts
       security:
         - BasicAuth: [ ]
@@ -115,42 +115,57 @@ paths:
         '403':
           description: Permission denied.
 
-  /products/{optionId}:
+  /products/{product_id}/info:
     get:
       tags:
         - Integration
-      summary: Get option information
+      summary: Get product info with its options
       description: >
-        Retrieve detailed information for a Holidoit option,
-        including cutoff times, cancellation policy, participant options,
-        duration, and quantity limits.  
-
+        Returns detailed information for a single product,
+        identified by its ID. Includes all options and their participant types.  
+        
         **Authentication required:** Basic Auth
-      operationId: getOptionInfo
+      operationId: getExperienceInfo
       security:
-        - BasicAuth: [ ]  # Require authentication for this endpoint
+        - BasicAuth: [ ]
       parameters:
-        - name: optionId
+        - name: product_id
           in: path
           required: true
-          description: The unique ID of the option.
+          description: >
+            Id of the experience.
           schema:
-            type: integer
-            example: 123
+            type: string
+            example: "test"
       responses:
         '200':
-          description: Detailed information about the option.
+          description: Product details with all options.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OptionInfo'
+                $ref: '#/components/schemas/ProductInfoResponse'
+              example:
+                id: "test"
+                internalName: "Test"
+                timeZone: "Europe/Rome"
+                options:
+                  - id: 101
+                    cutoffSeconds: 86400
+                    cancellationCutoffSeconds: 43200
+                    durationSeconds: 7200
+                    bookingItems:
+                      - id: 1
+                        name: "Adult"
+                      - id: 2
+                        name: "Child"
+                    minQuantity: 1
+                    maxQuantity: 12
+        '404':
+          description: Experience not found or no active Freedome configuration.
         '401':
           description: Authentication credentials were not provided or invalid.
         '403':
           description: Permission denied.
-        '404':
-          description: Variant not found.
-
 
   /availabilities:
     get:
