@@ -115,7 +115,7 @@ paths:
         '403':
           description: Permission denied.
 
-  /products/{productId}/info:
+  /products/{productId}:
     get:
       tags:
         - Integration
