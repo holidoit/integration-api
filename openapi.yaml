@@ -35,7 +35,7 @@ paths:
         Returns a list of partners that have configured for integration.  
         
         **Authentication required:** Basic Auth
-      operationId: getFreedomePartners
+      operationId: getPartners
       security:
         - BasicAuth: [ ]
       responses:
@@ -59,7 +59,7 @@ paths:
         '403':
           description: Permission denied.
 
-  /partners/{partner_id}/products:
+  /partners/{partnerId}/products:
     get:
       tags:
         - Integration
@@ -69,11 +69,11 @@ paths:
         including all options and their participant types.  
         
         **Authentication required:** Basic Auth
-      operationId: getFreedomePartnerProducts
+      operationId: getPartnerProducts
       security:
         - BasicAuth: [ ]
       parameters:
-        - name: partner_id
+        - name: partnerId
           in: path
           required: true
           description: >
@@ -115,7 +115,7 @@ paths:
         '403':
           description: Permission denied.
 
-  /products/{product_id}/info:
+  /products/{productId}/info:
     get:
       tags:
         - Integration
@@ -129,7 +129,7 @@ paths:
       security:
         - BasicAuth: [ ]
       parameters:
-        - name: product_id
+        - name: productId
           in: path
           required: true
           description: >
@@ -161,7 +161,7 @@ paths:
                     minQuantity: 1
                     maxQuantity: 12
         '404':
-          description: Experience not found or no active Freedome configuration.
+          description: Experience not found.
         '401':
           description: Authentication credentials were not provided or invalid.
         '403':
@@ -291,7 +291,7 @@ paths:
         If date range is not provided, the next 30 days are used by default.
         
         **Authentication required:** Basic Auth
-      operationId: getFreedomeBookings
+      operationId: getBookings
       security:
         - BasicAuth: [ ]
       parameters:
@@ -387,13 +387,56 @@ paths:
         '403':
           description: Permission denied.
 
-  /bookings/{external_reference}/confirm:
+  /bookings/{resellerReference}/reserve/cancel:
+    post:
+      tags:
+        - Integration
+      summary: Cancel a pending reservation
+      description: >
+        Cancels a *pending* reservation,
+        identified by its `resellerReference`.
+
+        If the reservation exists, it is deleted.  
+        
+        **Authentication required:** Basic Auth
+      operationId: postCancelReservation
+      security:
+        - BasicAuth: [ ]
+      parameters:
+        - name: resellerReference
+          in: path
+          required: true
+          description: External reference of the reservation to cancel.
+          schema:
+            type: string
+            example: "FRD-RES-12345"
+      responses:
+        '200':
+          description: Reservation cancelled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelReservationResponse'
+              example:
+                resellerReference: "FRD-RES-12345"
+                supplierReference: "HLD-555555"
+                utcCreatedAt: "2025-06-20T10:00:00Z"
+                utcCanceledAt: "2025-06-20T10:05:00Z"
+                status: "CANCELLED"
+        '404':
+          description: Reservation not found.
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+
+  /bookings/{resellerReference}/confirm:
     post:
       tags:
         - Integration
       summary: Confirm a booking
       description: >
-        Confirms a previously reserved booking identified by its `external_reference`.
+        Confirms a previously reserved booking identified by its `resellerReference`.
 
         This endpoint finalizes a booking by setting its status to **CONFIRMED**,
         validating the customer's contact information, and triggering confirmation
@@ -404,7 +447,7 @@ paths:
       security:
         - BasicAuth: [ ]
       parameters:
-        - name: external_reference
+        - name: resellerReference
           in: path
           required: true
           description: >
@@ -449,13 +492,13 @@ paths:
         '404':
           description: Booking not found.
 
-  /bookings/{external_reference}/cancel:
+  /bookings/{resellerReference}/cancel:
     post:
       tags:
         - Integration
       summary: Cancel a booking
       description: >
-        Cancels a previously confirmed booking identified by its `external_reference`.
+        Cancels a previously confirmed booking identified by its `resellerReference`.
 
         This endpoint marks the booking as **CANCELLED**.
         **Authentication required:** Basic Auth
@@ -463,7 +506,7 @@ paths:
       security:
         - BasicAuth: [ ]
       parameters:
-        - name: external_reference
+        - name: resellerReference
           in: path
           required: true
           description: >
@@ -495,13 +538,13 @@ paths:
         '404':
           description: Booking not found.
 
-  /bookings/{external_reference}:
+  /bookings/{resellerReference}:
     patch:
       tags:
         - Integration
       summary: Amend an existing booking
       description: >
-        Partially update a booking identified by its `external_reference`.  
+        Partially update a booking identified by its `resellerReference`.  
         This endpoint allows modifying:
         - The scheduled availability (date/time)
         - Participant quantities
@@ -516,7 +559,7 @@ paths:
       security:
         - BasicAuth: [ ]
       parameters:
-        - name: external_reference
+        - name: resellerReference
           in: path
           required: true
           description: >
@@ -958,7 +1001,7 @@ components:
 
         resellerReference:
           type: string
-          description: External reference provided by Freedome
+          description: reseller reference
           example: "FRD-12345"
 
         supplierReference:
@@ -1039,3 +1082,30 @@ components:
         phoneNumber:
           type: string
           example: "+39333111222"
+
+    CancelReservationResponse:
+      type: object
+      required:
+        - resellerReference
+        - supplierReference
+        - utcCanceledAt
+        - utcCreatedAt
+        - status
+      properties:
+        resellerReference:
+          type: string
+          example: "FRD-RES-12345"
+        supplierReference:
+          type: string
+          example: "HLD-555555"
+        utcCanceledAt:
+          type: string
+          format: date-time
+          example: "2025-06-20T10:05:00Z"
+        utcCreatedAt:
+          type: string
+          format: date-time
+          example: "2025-06-20T10:00:00Z"
+        status:
+          type: string
+          example: "CANCELLED"
