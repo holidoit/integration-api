@@ -280,6 +280,113 @@ paths:
           description: Permission denied.
         '404':
           description: Variant not found.
+    get:
+      tags:
+        - Integration
+      summary: Search confirmed bookings
+      description: >
+        Search and filter confirmed bookings by date range,
+        product, partner, option, or reseller references (AND).  
+        
+        If date range is not provided, the next 30 days are used by default.
+        
+        **Authentication required:** Basic Auth
+      operationId: getFreedomeBookings
+      security:
+        - BasicAuth: [ ]
+      parameters:
+        - name: resellerReferences
+          in: query
+          required: false
+          description: >
+            List of external booking references.
+            Example: ?resellerReferences=ABC123
+          schema:
+            type: array
+            items:
+              type: string
+            example: [ "ABC123", "XYZ999" ]
+
+        - name: localDateTimeStart
+          in: query
+          required: false
+          description: >
+            Start date (YYYY-MM-DD). Used to compute the datetime window (included).
+          schema:
+            type: string
+            format: date
+            example: "2026-01-01"
+
+        - name: localDateTimeEnd
+          in: query
+          required: false
+          description: >
+            End date (YYYY-MM-DD). Used to compute the datetime window (included).
+          schema:
+            type: string
+            format: date
+            example: "2026-03-01"
+
+        - name: partnerId
+          in: query
+          required: false
+          description: Partner UUID used for filtering.
+          schema:
+            type: string
+            format: uuid
+            example: "a3f20c3e-8f2e-4d33-bc12-88ff30dfbd9c"
+
+        - name: productId
+          in: query
+          required: false
+          description: Product Id used for filtering.
+          schema:
+            type: string
+            example: "test"
+
+        - name: optionId
+          in: query
+          required: false
+          description: Variant ID used for filtering.
+          schema:
+            type: integer
+            example: 101
+
+      responses:
+        '200':
+          description: List of matching bookings.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookingSearch'
+              example:
+                - status: "CONFIRMED"
+                  resellerReference: "XXX-12345"
+                  supplierReference: "YYY987654"
+                  utcCreatedAt: "2025-06-10T08:00:00Z"
+                  utcConfirmedAt: "2025-06-10T08:10:00Z"
+                  optionId: 101
+                  productId: "test-1"
+                  localDateTimeStart: "2025-06-20T10:00:00+02:00"
+                  localDateTimeEnd: "2025-06-20T12:00:00+02:00"
+                  contact:
+                    firstName: "John"
+                    lastName: "Doe"
+                    emailAddress: "john@example.com"
+                    phoneNumber: "+39333111222"
+                  notes: "Customer requested window seating"
+                  unitItems:
+                    - unitId: 1
+                      quantity: 2
+                    - unitId: 2
+                      quantity: 1
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+
   /bookings/{external_reference}/confirm:
     post:
       tags:
@@ -830,3 +937,105 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OptionInfo'
+
+    BookingSearch:
+      type: object
+      required:
+        - status
+        - resellerReference
+        - supplierReference
+        - utcCreatedAt
+        - optionId
+        - productId
+        - localDateTimeStart
+        - localDateTimeEnd
+        - contact
+        - unitItems
+      properties:
+        status:
+          type: string
+          example: "CONFIRMED"
+
+        resellerReference:
+          type: string
+          description: External reference provided by Freedome
+          example: "FRD-12345"
+
+        supplierReference:
+          type: string
+          description: Internal Holidoit booking code
+          example: "HLD-987654"
+
+        utcCreatedAt:
+          type: string
+          format: date-time
+          example: "2025-06-10T08:00:00Z"
+
+        utcConfirmedAt:
+          type: string
+          nullable: true
+          format: date-time
+          example: "2025-06-10T08:10:00Z"
+
+        optionId:
+          type: integer
+          description: ExperienceVariant ID
+          example: 101
+
+        productId:
+          type: string
+          description: Experience slug
+          example: "boat-tour-amalfi"
+
+        localDateTimeStart:
+          type: string
+          format: date-time
+          example: "2025-06-20T10:00:00+02:00"
+
+        localDateTimeEnd:
+          type: string
+          format: date-time
+          example: "2025-06-20T12:00:00+02:00"
+
+        contact:
+          $ref: '#/components/schemas/BookingContact'
+
+        notes:
+          type: string
+          nullable: true
+          example: "Customer requested window seating"
+
+        unitItems:
+          type: array
+          description: Grouped participant allocations
+          items:
+            type: object
+            properties:
+              unitId:
+                type: integer
+                example: 1
+              quantity:
+                type: integer
+                example: 2
+
+    BookingContact:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - emailAddress
+        - phoneNumber
+      properties:
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Doe"
+        emailAddress:
+          type: string
+          format: email
+          example: "john@example.com"
+        phoneNumber:
+          type: string
+          example: "+39333111222"
