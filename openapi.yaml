@@ -26,42 +26,146 @@ servers:
 
 
 paths:
-  /products/{optionId}:
+  /partners:
     get:
       tags:
         - Integration
-      summary: Get option information
+      summary: List partners with active experiences
       description: >
-        Retrieve detailed information for a Holidoit option,
-        including cutoff times, cancellation policy, participant options,
-        duration, and quantity limits.
-
+        Returns a list of partners that have configured for integration.  
+        
         **Authentication required:** Basic Auth
-      operationId: getOptionInfo
+      operationId: getPartners
       security:
-        - BasicAuth: []  # Require authentication for this endpoint
-      parameters:
-        - name: optionId
-          in: path
-          required: true
-          description: The unique ID of the option.
-          schema:
-            type: integer
-            example: 123
+        - BasicAuth: [ ]
       responses:
         '200':
-          description: Detailed information about the option.
+          description: List of partners with active integration.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OptionInfo'
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartnerWithProducts'
+              example:
+                - id: "a3f20c3e-8f2e-4d33-bc12-88ff30dfbd9c"
+                  products:
+                    - id: "test-1"
+                      internalName: "Test 1"
+                    - id: "test-2"
+                      internalName: "Test 2"
         '401':
           description: Authentication credentials were not provided or invalid.
         '403':
           description: Permission denied.
-        '404':
-          description: Variant not found.
 
+  /partners/{partnerId}/products:
+    get:
+      tags:
+        - Integration
+      summary: Get partner products with their options
+      description: >        
+        Returns all products of a partner,  
+        including all options and their participant types.  
+        
+        **Authentication required:** Basic Auth
+      operationId: getPartnerProducts
+      security:
+        - BasicAuth: [ ]
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          description: >
+            Id of the partner.
+          schema:
+            type: string
+            format: string
+            example: "5d8de66c-d1ae-4a92-8279-f959f6a9afa8"
+      responses:
+        '200':
+          description: List of all active products for the given partner.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductInfoResponse'
+              example:
+                - id: "test"
+                  internalName: "test"
+                  timeZone: "Europe/Rome"
+                  options:
+                    - id: 101
+                      cutoffSeconds: 86400
+                      cancellationCutoffSeconds: 43200
+                      durationSeconds: 7200
+                      bookingItems:
+                        - id: 1
+                          name: "Adult"
+                        - id: 2
+                          name: "Child"
+                      minQuantity: 1
+                      maxQuantity: 12
+        '404':
+          description: >
+            No products found for the given partner ID.
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+
+  /products/{productId}/info:
+    get:
+      tags:
+        - Integration
+      summary: Get product info with its options
+      description: >
+        Returns detailed information for a single product,
+        identified by its ID. Includes all options and their participant types.  
+        
+        **Authentication required:** Basic Auth
+      operationId: getExperienceInfo
+      security:
+        - BasicAuth: [ ]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: >
+            Id of the experience.
+          schema:
+            type: string
+            example: "test"
+      responses:
+        '200':
+          description: Product details with all options.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductInfoResponse'
+              example:
+                id: "test"
+                internalName: "Test"
+                timeZone: "Europe/Rome"
+                options:
+                  - id: 101
+                    cutoffSeconds: 86400
+                    cancellationCutoffSeconds: 43200
+                    durationSeconds: 7200
+                    bookingItems:
+                      - id: 1
+                        name: "Adult"
+                      - id: 2
+                        name: "Child"
+                    minQuantity: 1
+                    maxQuantity: 12
+        '404':
+          description: Experience not found.
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
 
   /availabilities:
     get:
@@ -74,7 +178,7 @@ paths:
         **Authentication required:** Basic Auth
       operationId: getAvailabilities
       security:
-        - BasicAuth: []
+        - BasicAuth: [ ]
       parameters:
         - name: optionId
           in: query
@@ -131,7 +235,7 @@ paths:
         **Authentication required:** Basic Auth
       operationId: postReserveBooking
       security:
-        - BasicAuth: []
+        - BasicAuth: [ ]
       requestBody:
         required: true
         content:
@@ -176,13 +280,163 @@ paths:
           description: Permission denied.
         '404':
           description: Variant not found.
-  /bookings/{external_reference}/confirm:
+    get:
+      tags:
+        - Integration
+      summary: Search confirmed bookings
+      description: >
+        Search and filter confirmed bookings by date range,
+        product, partner, option, or reseller references (AND).  
+        
+        If date range is not provided, the next 30 days are used by default.
+        
+        **Authentication required:** Basic Auth
+      operationId: getBookings
+      security:
+        - BasicAuth: [ ]
+      parameters:
+        - name: resellerReferences
+          in: query
+          required: false
+          description: >
+            List of external booking references.
+            Example: ?resellerReferences=ABC123
+          schema:
+            type: array
+            items:
+              type: string
+            example: [ "ABC123", "XYZ999" ]
+
+        - name: localDateTimeStart
+          in: query
+          required: false
+          description: >
+            Start date (YYYY-MM-DD). Used to compute the datetime window (included).
+          schema:
+            type: string
+            format: date
+            example: "2026-01-01"
+
+        - name: localDateTimeEnd
+          in: query
+          required: false
+          description: >
+            End date (YYYY-MM-DD). Used to compute the datetime window (included).
+          schema:
+            type: string
+            format: date
+            example: "2026-03-01"
+
+        - name: partnerId
+          in: query
+          required: false
+          description: Partner UUID used for filtering.
+          schema:
+            type: string
+            format: uuid
+            example: "a3f20c3e-8f2e-4d33-bc12-88ff30dfbd9c"
+
+        - name: productId
+          in: query
+          required: false
+          description: Product Id used for filtering.
+          schema:
+            type: string
+            example: "test"
+
+        - name: optionId
+          in: query
+          required: false
+          description: Variant ID used for filtering.
+          schema:
+            type: integer
+            example: 101
+
+      responses:
+        '200':
+          description: List of matching bookings.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookingSearch'
+              example:
+                - status: "CONFIRMED"
+                  resellerReference: "XXX-12345"
+                  supplierReference: "YYY987654"
+                  utcCreatedAt: "2025-06-10T08:00:00Z"
+                  utcConfirmedAt: "2025-06-10T08:10:00Z"
+                  optionId: 101
+                  productId: "test-1"
+                  localDateTimeStart: "2025-06-20T10:00:00+02:00"
+                  localDateTimeEnd: "2025-06-20T12:00:00+02:00"
+                  contact:
+                    firstName: "John"
+                    lastName: "Doe"
+                    emailAddress: "john@example.com"
+                    phoneNumber: "+39333111222"
+                  notes: "Customer requested window seating"
+                  unitItems:
+                    - unitId: 1
+                      quantity: 2
+                    - unitId: 2
+                      quantity: 1
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+
+  /bookings/{resellerReference}/reserve/cancel:
+    post:
+      tags:
+        - Integration
+      summary: Cancel a pending reservation
+      description: >
+        Cancels a *pending* reservation,
+        identified by its `resellerReference`.
+
+        If the reservation exists, it is deleted.  
+        
+        **Authentication required:** Basic Auth
+      operationId: postCancelReservation
+      security:
+        - BasicAuth: [ ]
+      parameters:
+        - name: resellerReference
+          in: path
+          required: true
+          description: External reference of the reservation to cancel.
+          schema:
+            type: string
+            example: "FRD-RES-12345"
+      responses:
+        '200':
+          description: Reservation cancelled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelReservationResponse'
+              example:
+                resellerReference: "FRD-RES-12345"
+                supplierReference: "HLD-555555"
+                utcCreatedAt: "2025-06-20T10:00:00Z"
+                utcCanceledAt: "2025-06-20T10:05:00Z"
+                status: "CANCELLED"
+        '404':
+          description: Reservation not found.
+        '401':
+          description: Authentication credentials were not provided or invalid.
+        '403':
+          description: Permission denied.
+
+  /bookings/{resellerReference}/confirm:
     post:
       tags:
         - Integration
       summary: Confirm a booking
       description: >
-        Confirms a previously reserved booking identified by its `external_reference`.
+        Confirms a previously reserved booking identified by its `resellerReference`.
 
         This endpoint finalizes a booking by setting its status to **CONFIRMED**,
         validating the customer's contact information, and triggering confirmation
@@ -191,9 +445,9 @@ paths:
         **Authentication required:** Basic Auth
       operationId: postConfirmBooking
       security:
-        - BasicAuth: []
+        - BasicAuth: [ ]
       parameters:
-        - name: external_reference
+        - name: resellerReference
           in: path
           required: true
           description: >
@@ -238,21 +492,21 @@ paths:
         '404':
           description: Booking not found.
 
-  /bookings/{external_reference}/cancel:
+  /bookings/{resellerReference}/cancel:
     post:
       tags:
         - Integration
       summary: Cancel a booking
       description: >
-        Cancels a previously confirmed booking identified by its `external_reference`.
+        Cancels a previously confirmed booking identified by its `resellerReference`.
 
         This endpoint marks the booking as **CANCELLED**.
         **Authentication required:** Basic Auth
       operationId: postCancelBooking
       security:
-        - BasicAuth: []
+        - BasicAuth: [ ]
       parameters:
-        - name: external_reference
+        - name: resellerReference
           in: path
           required: true
           description: >
@@ -284,13 +538,13 @@ paths:
         '404':
           description: Booking not found.
 
-  /bookings/{external_reference}:
+  /bookings/{resellerReference}:
     patch:
       tags:
         - Integration
       summary: Amend an existing booking
       description: >
-        Partially update a booking identified by its `external_reference`.  
+        Partially update a booking identified by its `resellerReference`.  
         This endpoint allows modifying:
         - The scheduled availability (date/time)
         - Participant quantities
@@ -303,9 +557,9 @@ paths:
 
       operationId: patchBookingAmendment
       security:
-        - BasicAuth: []
+        - BasicAuth: [ ]
       parameters:
-        - name: external_reference
+        - name: resellerReference
           in: path
           required: true
           description: >
@@ -361,6 +615,36 @@ components:
         HTTP Basic authentication using username and password.
 
   schemas:
+    PartnerWithProducts:
+      type: object
+      required:
+        - id
+        - products
+      properties:
+        id:
+          type: string
+          example: "a3f20c3e-8f2e-4d33-bc12-88ff30dfbd9c"
+          description: UUID of the partner.
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerProduct'
+
+    PartnerProduct:
+      type: object
+      required:
+        - id
+        - internalName
+      properties:
+        id:
+          type: string
+          example: "test"
+          description: >
+            Experience id.
+        internalName:
+          type: string
+          example: "Test"
+
     OptionInfo:
       type: object
       required:
@@ -527,7 +811,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Availability'
-  
+
     ConfirmBookingRequest:
       type: object
       required:
@@ -673,3 +957,155 @@ components:
         status:
           type: string
           example: "CONFIRMED"
+
+    ProductInfoResponse:
+      type: object
+      required:
+        - id
+        - internalName
+        - timeZone
+        - options
+      properties:
+        id:
+          type: string
+          example: "test"
+          description: Experience slug (string identifier)
+        internalName:
+          type: string
+          example: "Test"
+        timeZone:
+          type: string
+          example: "Europe/Rome"
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionInfo'
+
+    BookingSearch:
+      type: object
+      required:
+        - status
+        - resellerReference
+        - supplierReference
+        - utcCreatedAt
+        - optionId
+        - productId
+        - localDateTimeStart
+        - localDateTimeEnd
+        - contact
+        - unitItems
+      properties:
+        status:
+          type: string
+          example: "CONFIRMED"
+
+        resellerReference:
+          type: string
+          description: reseller reference
+          example: "FRD-12345"
+
+        supplierReference:
+          type: string
+          description: Internal Holidoit booking code
+          example: "HLD-987654"
+
+        utcCreatedAt:
+          type: string
+          format: date-time
+          example: "2025-06-10T08:00:00Z"
+
+        utcConfirmedAt:
+          type: string
+          nullable: true
+          format: date-time
+          example: "2025-06-10T08:10:00Z"
+
+        optionId:
+          type: integer
+          description: ExperienceVariant ID
+          example: 101
+
+        productId:
+          type: string
+          description: Experience slug
+          example: "boat-tour-amalfi"
+
+        localDateTimeStart:
+          type: string
+          format: date-time
+          example: "2025-06-20T10:00:00+02:00"
+
+        localDateTimeEnd:
+          type: string
+          format: date-time
+          example: "2025-06-20T12:00:00+02:00"
+
+        contact:
+          $ref: '#/components/schemas/BookingContact'
+
+        notes:
+          type: string
+          nullable: true
+          example: "Customer requested window seating"
+
+        unitItems:
+          type: array
+          description: Grouped participant allocations
+          items:
+            type: object
+            properties:
+              unitId:
+                type: integer
+                example: 1
+              quantity:
+                type: integer
+                example: 2
+
+    BookingContact:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - emailAddress
+        - phoneNumber
+      properties:
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Doe"
+        emailAddress:
+          type: string
+          format: email
+          example: "john@example.com"
+        phoneNumber:
+          type: string
+          example: "+39333111222"
+
+    CancelReservationResponse:
+      type: object
+      required:
+        - resellerReference
+        - supplierReference
+        - utcCanceledAt
+        - utcCreatedAt
+        - status
+      properties:
+        resellerReference:
+          type: string
+          example: "FRD-RES-12345"
+        supplierReference:
+          type: string
+          example: "HLD-555555"
+        utcCanceledAt:
+          type: string
+          format: date-time
+          example: "2025-06-20T10:05:00Z"
+        utcCreatedAt:
+          type: string
+          format: date-time
+          example: "2025-06-20T10:00:00Z"
+        status:
+          type: string
+          example: "CANCELLED"
