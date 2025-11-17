@@ -49,6 +49,8 @@ paths:
                   $ref: '#/components/schemas/PartnerWithProducts'
               example:
                 - id: "a3f20c3e-8f2e-4d33-bc12-88ff30dfbd9c"
+                  name: "test"
+                  email: "example@partner.com"
                   products:
                     - id: "test-1"
                       internalName: "Test 1"
@@ -620,11 +622,21 @@ components:
       required:
         - id
         - products
+        - name
+        - email
       properties:
         id:
           type: string
           example: "a3f20c3e-8f2e-4d33-bc12-88ff30dfbd9c"
           description: UUID of the partner.
+        name:
+          type: string
+          example: "Partner Name"
+          description: Name of the partner.
+        email:
+          type: string
+          format: email
+          example: "example@partner.com"
         products:
           type: array
           items:
