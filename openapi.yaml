@@ -389,7 +389,7 @@ paths:
         '403':
           description: Permission denied.
 
-  /bookings/{supplierReference}/reserve/cancel:
+  /bookings/{supplierReference}/cancel-reservation:
     post:
       tags:
         - Integration
