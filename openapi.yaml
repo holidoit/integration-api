@@ -19,9 +19,7 @@ servers:
     description: Test server
     variables:
       integration:
-        default: freedome
-        enum:
-          - freedome
+        default: company_name
         description: The integration identifier.
 
 
