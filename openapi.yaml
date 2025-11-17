@@ -49,6 +49,8 @@ paths:
                   $ref: '#/components/schemas/PartnerWithProducts'
               example:
                 - id: "a3f20c3e-8f2e-4d33-bc12-88ff30dfbd9c"
+                  name: "test"
+                  email: "example@partner.com"
                   products:
                     - id: "test-1"
                       internalName: "Test 1"
@@ -259,7 +261,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReservationResponse'
               example:
-                supplierReference: "HLD-987654"
+                supplierReference: "HLD1987654"
                 resellerReference: "FRD-ABC123"
                 utcCreatedAt: "2025-06-15T08:00:00Z"
                 utcExpiresAt: "2025-06-15T08:15:00Z"
@@ -419,7 +421,7 @@ paths:
                 $ref: '#/components/schemas/CancelReservationResponse'
               example:
                 resellerReference: "FRD-RES-12345"
-                supplierReference: "HLD-555555"
+                supplierReference: "HLD1555555"
                 utcCreatedAt: "2025-06-20T10:00:00Z"
                 utcCanceledAt: "2025-06-20T10:05:00Z"
                 status: "CANCELLED"
@@ -479,7 +481,7 @@ paths:
                 $ref: '#/components/schemas/ConfirmBookingResponse'
               example:
                 resellerReference: "FRD-ABC123"
-                supplierReference: "HLD-987654"
+                supplierReference: "HLD1987654"
                 utcCreated_at: "2025-06-15T08:00:00Z"
                 utcConfirmed_at: "2025-06-15T08:05:00Z"
                 status: "CONFIRMED"
@@ -524,7 +526,7 @@ paths:
                 $ref: '#/components/schemas/CancelBookingResponse'
               example:
                 resellerReference: "FRD-ABC123"
-                supplierReference: "HLD-987654"
+                supplierReference: "HLD1987654"
                 utcCanceledAt: "2025-06-15T09:00:00Z"
                 utcCreatedAt: "2025-06-15T08:00:00Z"
                 utcConfirmedAt: "2025-06-15T08:05:00Z"
@@ -594,7 +596,7 @@ paths:
                 $ref: '#/components/schemas/BookingAmendmentResponse'
               example:
                 resellerReference: "FRD-ABC123"
-                supplierReference: "HLD-987654"
+                supplierReference: "HLD1987654"
                 utcUpdatedAt: "2025-06-16T08:15:00Z"
                 status: "CONFIRMED"
         '400':
@@ -620,11 +622,21 @@ components:
       required:
         - id
         - products
+        - name
+        - email
       properties:
         id:
           type: string
           example: "a3f20c3e-8f2e-4d33-bc12-88ff30dfbd9c"
           description: UUID of the partner.
+        name:
+          type: string
+          example: "Partner Name"
+          description: Name of the partner.
+        email:
+          type: string
+          format: email
+          example: "example@partner.com"
         products:
           type: array
           items:
@@ -791,7 +803,7 @@ components:
       properties:
         supplierReference:
           type: string
-          example: "HLD-987654"
+          example: "HLD1987654"
         resellerReference:
           type: string
           nullable: true
@@ -865,7 +877,7 @@ components:
           example: "FRD-ABC123"
         supplierReference:
           type: string
-          example: "HLD-987654"
+          example: "HLD1987654"
         utcCreated_at:
           type: string
           format: date-time
@@ -893,7 +905,7 @@ components:
           example: "FRD-ABC123"
         supplierReference:
           type: string
-          example: "HLD-987654"
+          example: "HLD1987654"
         utcCanceledAt:
           type: string
           format: date-time
@@ -949,7 +961,7 @@ components:
           example: "FRD-ABC123"
         supplierReference:
           type: string
-          example: "HLD-987654"
+          example: "HLD1987654"
         utcUpdatedAt:
           type: string
           format: date-time
@@ -1007,7 +1019,7 @@ components:
         supplierReference:
           type: string
           description: Internal Holidoit booking code
-          example: "HLD-987654"
+          example: "HLD9876541"
 
         utcCreatedAt:
           type: string
@@ -1097,7 +1109,7 @@ components:
           example: "FRD-RES-12345"
         supplierReference:
           type: string
-          example: "HLD-555555"
+          example: "HLD5555555"
         utcCanceledAt:
           type: string
           format: date-time
