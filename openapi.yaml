@@ -411,7 +411,7 @@ paths:
           description: The reference of the reservation to cancel.
           schema:
             type: string
-            example: "FRD-RES-12345"
+            example: "HLDABC1234"
       responses:
         '200':
           description: Reservation cancelled successfully.
@@ -457,7 +457,7 @@ paths:
             (e.g., the `bookingReference` used in the `/bookings` endpoint).
           schema:
             type: string
-            example: "FRD-ABC123"
+            example: "HLDABC1234"
       requestBody:
         required: true
         content:
@@ -516,7 +516,7 @@ paths:
             (e.g., the `bookingReference` used in the `/bookings` endpoint).
           schema:
             type: string
-            example: "FRD-ABC123"
+            example: "HLDABC1234"
       responses:
         '200':
           description: Booking cancelled successfully.
@@ -569,7 +569,7 @@ paths:
             (e.g., the `bookingReference` used in the `/bookings` endpoint).
           schema:
             type: string
-            example: "FRD-ABC123"
+            example: "HLDABC1234"
       requestBody:
         required: true
         content:
