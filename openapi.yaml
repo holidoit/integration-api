@@ -994,8 +994,6 @@ components:
         - supplierReference
         - utcCreatedAt
         - utcConfirmedAt
-        - utcCreated_at
-        - utcConfirmed_at
         - status
       properties:
         resellerReference:
