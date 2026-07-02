@@ -211,7 +211,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Availability'
+                  $ref: '#/components/schemas/AvailableAvailability'
         '400':
           description: Invalid parameters or validation failed.
         '401':
@@ -286,7 +286,7 @@ paths:
       summary: Search pending and confirmed bookings
       description: >
         Search and filter pending and confirmed bookings by date range,
-        product, partner, option, or supplier references (AND).  
+        product, partner, option, or Holidoit booking references (AND).
         
         If date range is not provided, the next 30 days are used by default.
         
@@ -378,9 +378,11 @@ paths:
                     phoneNumber: "+39333111222"
                   notes: "Customer requested window seating"
                   unitItems:
-                    - unitId: 1
+                    - id: 1
+                      name: "Adult"
                       quantity: 2
-                    - unitId: 2
+                    - id: 2
+                      name: "Child"
                       quantity: 1
                 - status: "PENDING"
                   resellerReference: "XXX-67890"
@@ -398,7 +400,8 @@ paths:
                     phoneNumber: "+39333999888"
                   notes: "Waiting for supplier confirmation"
                   unitItems:
-                    - unitId: 1
+                    - id: 1
+                      name: "Adult"
                       quantity: 2
         '400':
           description: Invalid query parameters.
@@ -527,8 +530,9 @@ paths:
 
         For an on-hold reservation, this endpoint validates the customer's contact
         information, stores the booking amount and optional notes, then sets the
-        booking status to **CONFIRMED**. For an already pending or confirmed booking,
-        the request is idempotent and the payload can be omitted.
+        booking status to **CONFIRMED**. For a pending booking, the payload can be
+        omitted and the booking is moved to **CONFIRMED**. For an already confirmed
+        booking, the request is idempotent and the payload can be omitted.
 
         **Authentication required:** Basic Auth
       operationId: postConfirmBooking
@@ -586,12 +590,11 @@ paths:
     post:
       tags:
         - Integration
-      summary: Cancel a pending or confirmed booking
+      summary: Cancel a booking
       description: >
-        Cancels a previously pending or confirmed booking identified by its
-        `supplierReference`.
-
-        This endpoint marks the booking as **CANCELLED**.
+        Cancels the booking identified by its `supplierReference`.
+        Pending and confirmed bookings are actively cancelled; other existing
+        booking states still return the current cancellation response shape.
         **Authentication required:** Basic Auth
       operationId: postCancelBooking
       security:
@@ -619,8 +622,6 @@ paths:
                 utcCreatedAt: "2025-06-15T08:00:00Z"
                 utcConfirmedAt: "2025-06-15T08:05:00Z"
                 status: "CANCELLED"
-        '400':
-          description: Invalid input or the booking cannot be cancelled.
         '401':
           description: Authentication credentials were not provided or invalid.
         '403':
@@ -638,7 +639,7 @@ paths:
         This endpoint allows modifying:
         - The scheduled availability (date/time)
         - Participant quantities
-        - Contact details
+        - Contact name and phone details
         - Notes
         - Booking amount
 
@@ -658,7 +659,7 @@ paths:
             type: string
             example: "HLDABC1234"
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -724,6 +725,7 @@ components:
         email:
           type: string
           format: email
+          nullable: true
           example: "example@partner.com"
         products:
           type: array
@@ -754,6 +756,8 @@ components:
         - cancellationCutoffSeconds
         - durationSeconds
         - bookingItems
+        - minQuantity
+        - maxQuantity
       properties:
         id:
           type: integer
@@ -812,6 +816,7 @@ components:
         - id
         - localDateTimeStart
         - localDateTimeEnd
+        - utcCutoffAt
         - available
         - status
         - vacancies
@@ -833,7 +838,6 @@ components:
         utcCutoffAt:
           type: string
           format: date-time
-          nullable: true
           example: "2025-06-12T09:00:00Z"
           description: UTC cutoff time for booking this slot.
         available:
@@ -852,6 +856,26 @@ components:
           type: integer
           example: 5
           description: Number of available places.
+
+    AvailableAvailability:
+      allOf:
+        - $ref: '#/components/schemas/Availability'
+        - type: object
+          description: Availability slot returned by `GET /availabilities`.
+          required:
+            - available
+            - status
+          properties:
+            available:
+              type: boolean
+              enum:
+                - true
+              example: true
+            status:
+              type: string
+              enum:
+                - AVAILABLE
+              example: "AVAILABLE"
 
     ReservationRequest:
       type: object
@@ -1051,6 +1075,7 @@ components:
           example: "HLD1987654"
         utcCanceledAt:
           type: string
+          nullable: true
           format: date-time
           example: "2025-06-15T09:00:00Z"
         utcCreatedAt:
@@ -1074,7 +1099,6 @@ components:
         availability:
           type: string
           format: date-time
-          nullable: true
           example: "2025-06-16T10:00:00+02:00"
         notes:
           type: string
@@ -1085,7 +1109,12 @@ components:
           items:
             $ref: '#/components/schemas/ReservationBookingItem'
         contact:
-          $ref: '#/components/schemas/Contact'
+          allOf:
+            - $ref: '#/components/schemas/Contact'
+          description: >
+            Contact payload accepted by the shared schema. The current endpoint
+            updates first name, last name, and phone number; emailAddress is
+            required by validation but is not applied to the booking.
         amount:
           type: number
           format: decimal
@@ -1219,10 +1248,17 @@ components:
           description: Grouped participant allocations
           items:
             type: object
+            required:
+              - id
+              - name
+              - quantity
             properties:
-              unitId:
+              id:
                 type: integer
                 example: 1
+              name:
+                type: string
+                example: "Adult"
               quantity:
                 type: integer
                 example: 2
@@ -1247,6 +1283,7 @@ components:
           example: "john@example.com"
         phoneNumber:
           type: string
+          nullable: true
           example: "+39333111222"
 
     CancelReservationResponse:
