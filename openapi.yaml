@@ -489,7 +489,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ConfirmBookingRequest'
+              $ref: '#/components/schemas/PendingBookingRequest'
             example:
               contact:
                 firstName: "John"
@@ -964,6 +964,14 @@ components:
           type: string
           nullable: true
           example: "Customer requested window seats"
+
+    PendingBookingRequest:
+      allOf:
+        - $ref: '#/components/schemas/ConfirmBookingRequest'
+      description: >
+        Request payload used when moving an on-hold reservation to pending.
+        The fields match `ConfirmBookingRequest`, but this schema is named for
+        the pending flow.
 
     Contact:
       type: object
