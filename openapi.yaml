@@ -75,11 +75,10 @@ paths:
         - name: partnerId
           in: path
           required: true
-          description: >
-            Id of the partner.
+          description: Partner UUID.
           schema:
             type: string
-            format: string
+            format: uuid
             example: "5d8de66c-d1ae-4a92-8279-f959f6a9afa8"
       responses:
         '200':
@@ -96,6 +95,7 @@ paths:
                   timeZone: "Europe/Rome"
                   options:
                     - id: 101
+                      name: "Morning tour - 2 hours"
                       cutoffSeconds: 86400
                       cancellationCutoffSeconds: 43200
                       durationSeconds: 7200
@@ -149,6 +149,7 @@ paths:
                 timeZone: "Europe/Rome"
                 options:
                   - id: 101
+                    name: "Morning tour - 2 hours"
                     cutoffSeconds: 86400
                     cancellationCutoffSeconds: 43200
                     durationSeconds: 7200
@@ -184,8 +185,8 @@ paths:
           required: true
           description: The ID of the variant (option) to get availabilities for.
           schema:
-            type: string
-            example: "123"
+            type: integer
+            example: 123
         - name: localDateStart
           in: query
           required: true
@@ -381,18 +382,40 @@ paths:
                       quantity: 2
                     - unitId: 2
                       quantity: 1
+                - status: "PENDING"
+                  resellerReference: "XXX-67890"
+                  supplierReference: "HLD1234567"
+                  utcCreatedAt: "2025-06-11T08:00:00Z"
+                  utcConfirmedAt: null
+                  optionId: 101
+                  productId: "test-1"
+                  localDateTimeStart: "2025-06-21T10:00:00+02:00"
+                  localDateTimeEnd: "2025-06-21T12:00:00+02:00"
+                  contact:
+                    firstName: "Jane"
+                    lastName: "Doe"
+                    emailAddress: "jane@example.com"
+                    phoneNumber: "+39333999888"
+                  notes: "Waiting for supplier confirmation"
+                  unitItems:
+                    - unitId: 1
+                      quantity: 2
+        '400':
+          description: Invalid query parameters.
         '401':
           description: Authentication credentials were not provided or invalid.
         '403':
           description: Permission denied.
+        '404':
+          description: Variant not found.
 
   /bookings/{supplierReference}/cancel-reservation:
     post:
       tags:
         - Integration
-      summary: Cancel a pending reservation
+      summary: Cancel an on-hold reservation
       description: >
-        Cancels a *pending* reservation,
+        Cancels an *on-hold* reservation,
         identified by its `supplierReference`.
 
         If the reservation exists, it is deleted.  
@@ -405,7 +428,7 @@ paths:
         - name: supplierReference
           in: path
           required: true
-          description: The reference of the reservation to cancel.
+          description: The Holidoit booking reference returned by the reservation endpoint.
           schema:
             type: string
             example: "HLDABC1234"
@@ -442,7 +465,8 @@ paths:
         and optional notes, then triggers the partner booking request workflows.
 
         Calling this endpoint for an already pending booking is idempotent and
-        returns the current pending booking details.
+        returns the current pending booking details. In that case the payload can
+        be omitted.
 
         **Authentication required:** Basic Auth
       operationId: postPendingBooking
@@ -452,12 +476,13 @@ paths:
         - name: supplierReference
           in: path
           required: true
-          description: The supplier reference returned by the reservation endpoint.
+          description: The Holidoit booking reference returned by the reservation endpoint.
           schema:
             type: string
             example: "HLDABC1234"
       requestBody:
-        required: true
+        required: false
+        description: Required when moving an on-hold reservation to pending.
         content:
           application/json:
             schema:
@@ -500,9 +525,10 @@ paths:
       description: >
         Confirms a previously reserved booking identified by its `supplierReference`.
 
-        This endpoint finalizes a booking by setting its status to **CONFIRMED**,
-        validating the customer's contact information, and triggering confirmation
-        workflows such as partner emails.
+        For an on-hold reservation, this endpoint validates the customer's contact
+        information, stores the booking amount and optional notes, then sets the
+        booking status to **CONFIRMED**. For an already pending or confirmed booking,
+        the request is idempotent and the payload can be omitted.
 
         **Authentication required:** Basic Auth
       operationId: postConfirmBooking
@@ -513,13 +539,13 @@ paths:
           in: path
           required: true
           description: >
-            The external booking reference provided during reservation
-            (e.g., the `bookingReference` used in the `/bookings` endpoint).
+            The Holidoit booking reference returned by the reservation endpoint.
           schema:
             type: string
             example: "HLDABC1234"
       requestBody:
-        required: true
+        required: false
+        description: Required when confirming an on-hold reservation.
         content:
           application/json:
             schema:
@@ -542,6 +568,8 @@ paths:
               example:
                 resellerReference: "FRD-ABC123"
                 supplierReference: "HLD1987654"
+                utcCreatedAt: "2025-06-15T08:00:00Z"
+                utcConfirmedAt: "2025-06-15T08:05:00Z"
                 utcCreated_at: "2025-06-15T08:00:00Z"
                 utcConfirmed_at: "2025-06-15T08:05:00Z"
                 status: "CONFIRMED"
@@ -558,9 +586,10 @@ paths:
     post:
       tags:
         - Integration
-      summary: Cancel a booking
+      summary: Cancel a pending or confirmed booking
       description: >
-        Cancels a previously confirmed booking identified by its `supplierReference`.
+        Cancels a previously pending or confirmed booking identified by its
+        `supplierReference`.
 
         This endpoint marks the booking as **CANCELLED**.
         **Authentication required:** Basic Auth
@@ -572,8 +601,7 @@ paths:
           in: path
           required: true
           description: >
-            The external booking reference provided during reservation
-            (e.g., the `bookingReference` used in the `/bookings` endpoint).
+            The Holidoit booking reference returned by the reservation endpoint.
           schema:
             type: string
             example: "HLDABC1234"
@@ -625,8 +653,7 @@ paths:
           in: path
           required: true
           description: >
-            The external booking reference provided during reservation
-            (e.g., the `bookingReference` used in the `/bookings` endpoint).
+            The Holidoit booking reference returned by the reservation endpoint.
           schema:
             type: string
             example: "HLDABC1234"
@@ -645,6 +672,7 @@ paths:
               contact:
                 firstName: "Jane"
                 lastName: "Doe"
+                emailAddress: "jane.doe@example.com"
                 phoneNumber: "+39333999888"
               amount: 200.00
       responses:
@@ -721,6 +749,7 @@ components:
       type: object
       required:
         - id
+        - name
         - cutoffSeconds
         - cancellationCutoffSeconds
         - durationSeconds
@@ -730,6 +759,10 @@ components:
           type: integer
           example: 123
           description: The ID of the variant.
+        name:
+          type: string
+          example: "Morning tour - 2 hours"
+          description: The option display name.
         cutoffSeconds:
           type: integer
           example: 86400
@@ -809,6 +842,10 @@ components:
           description: Whether the slot is available for booking.
         status:
           type: string
+          enum:
+            - AVAILABLE
+            - SOLD_OUT
+            - CLOSED
           example: "AVAILABLE"
           description: The availability status.
         vacancies:
@@ -878,7 +915,10 @@ components:
           example: "2025-06-15T08:15:00Z"
         status:
           type: string
+          enum:
+            - ON_HOLD
           example: "ON_HOLD"
+          description: Public API status for an on-hold reservation. Maps to the internal `CHECKOUT` booking status.
         availability:
           type: array
           items:
@@ -928,6 +968,8 @@ components:
       required:
         - resellerReference
         - supplierReference
+        - utcCreatedAt
+        - utcConfirmedAt
         - utcCreated_at
         - utcConfirmed_at
         - status
@@ -938,16 +980,28 @@ components:
         supplierReference:
           type: string
           example: "HLD1987654"
+        utcCreatedAt:
+          type: string
+          format: date-time
+          example: "2025-06-15T08:00:00Z"
+        utcConfirmedAt:
+          type: string
+          format: date-time
+          example: "2025-06-15T08:05:00Z"
         utcCreated_at:
           type: string
           format: date-time
+          deprecated: true
           example: "2025-06-15T08:00:00Z"
         utcConfirmed_at:
           type: string
           format: date-time
+          deprecated: true
           example: "2025-06-15T08:05:00Z"
         status:
           type: string
+          enum:
+            - CONFIRMED
           example: "CONFIRMED"
 
     PendingBookingResponse:
@@ -975,6 +1029,8 @@ components:
           example: "2025-06-15T08:05:00Z"
         status:
           type: string
+          enum:
+            - PENDING
           example: "PENDING"
 
     CancelBookingResponse:
@@ -1003,10 +1059,13 @@ components:
           example: "2025-06-15T08:00:00Z"
         utcConfirmedAt:
           type: string
+          nullable: true
           format: date-time
           example: "2025-06-15T08:05:00Z"
         status:
           type: string
+          enum:
+            - CANCELLED
           example: "CANCELLED"
 
     BookingAmendmentRequest:
@@ -1055,6 +1114,8 @@ components:
           example: "2025-06-16T08:15:00Z"
         status:
           type: string
+          enum:
+            - CONFIRMED
           example: "CONFIRMED"
 
     ProductInfoResponse:
@@ -1068,7 +1129,7 @@ components:
         id:
           type: string
           example: "test"
-          description: Experience slug (string identifier)
+          description: Experience id.
         internalName:
           type: string
           example: "Test"
@@ -1087,15 +1148,21 @@ components:
         - resellerReference
         - supplierReference
         - utcCreatedAt
+        - utcConfirmedAt
         - optionId
         - productId
         - localDateTimeStart
         - localDateTimeEnd
         - contact
+        - notes
         - unitItems
       properties:
         status:
           type: string
+          enum:
+            - PENDING
+            - CONFIRMED
+            - RESCHEDULED
           example: "CONFIRMED"
 
         resellerReference:
@@ -1126,7 +1193,7 @@ components:
 
         productId:
           type: string
-          description: Experience slug
+          description: Experience id.
           example: "boat-tour-amalfi"
 
         localDateTimeStart:
@@ -1207,4 +1274,6 @@ components:
           example: "2025-06-20T10:00:00Z"
         status:
           type: string
+          enum:
+            - CANCELLED
           example: "CANCELLED"
